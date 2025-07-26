@@ -35,9 +35,10 @@ class AstorTool(AbstractRepairTool):
         timeout_m = str(float(timeout_h) * 60)
         max_gen = 1000000
 
-        dir_java_src = join(self.dir_expr, "src", bug_info[self.key_dir_source])
-        dir_test_src = join(self.dir_expr, "src", bug_info[self.key_dir_tests])
-        dir_java_bin = bug_info[self.key_dir_source]
+        # Extract relative directory paths from bug info for Java source and binaries
+        dir_java_src = bug_info[self.key_dir_source]
+        dir_test_src = bug_info[self.key_dir_tests]
+        dir_java_bin = bug_info[self.key_dir_class]
         dir_test_bin = bug_info[self.key_dir_test_class]
 
         env = {}
@@ -59,25 +60,30 @@ class AstorTool(AbstractRepairTool):
             join(self.astor_home, "external", "lib", "hamcrest-core-1.3.jar"),
             join(self.astor_home, "external", "lib", "junit-4.12.jar"),
         ]
+
+        project_name = bug_info.get(self.key_project_name, "").strip()
+        # Adding the submodule path to the experiment directory structure if that exists
+        absolute_directory_path = join(self.dir_expr, "src", "src", project_name) if project_name else join(self.dir_expr, "src")
+
         # Ensure the dependencies exist
         if bug_info[self.key_build_system] == "maven":
             self.run_command(
                 f"mvn dependency:copy-dependencies",
-                dir_path=join(self.dir_expr, "src"),
+                dir_path=absolute_directory_path,
                 env=env,
             )
             # Add common folders for deependencies
             list_deps += [
                 x
                 for x in self.list_dir(
-                    join(self.dir_expr, "src", "target", "dependency")
+                    join(absolute_directory_path, "target", "dependency")
                 )
                 if x.endswith(".jar")
             ]
             list_deps += [
                 x
                 for x in self.list_dir(
-                    join(self.dir_expr, "src", "test", "target", "dependency")
+                    join(absolute_directory_path, "test", "target", "dependency")
                 )
                 if x.endswith(".jar")
             ]
@@ -96,7 +102,7 @@ class AstorTool(AbstractRepairTool):
             f"-srctestfolder {dir_test_src}  "
             f"-binjavafolder {dir_java_bin} "
             f"-bintestfolder  {dir_test_bin} "
-            f"-location {self.dir_expr}/src "
+            f"-location {absolute_directory_path} "
             f"-dependencies {list_deps_str} "
             f"-maxgen {max_gen} "
             f"-maxtime {int(math.ceil(float(timeout_m)))} "

@@ -17,6 +17,7 @@ KEY_CONFIG_TIMEOUT = "timeout"
 KEY_FL_FORMULA = "fl_formula"
 KEY_STACK_TRACE = "stack_trace"
 KEY_TIMESTAMP = "timestamp"
+KEY_PROJECT_NAME = "project_name"
 
 KEY_TIEBREAKER_FUNCTIONS = "tiebreaker_functions"
 KEY_TIEBREAKER_FILES = "tiebreaker_files"

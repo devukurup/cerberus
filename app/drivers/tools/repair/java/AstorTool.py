@@ -1,5 +1,6 @@
 import math
 import re
+import os
 from os.path import join
 from typing import Any
 from typing import Dict
@@ -90,6 +91,34 @@ class AstorTool(AbstractRepairTool):
 
         list_deps_str = ":".join(list_deps)
 
+        # Normalize failing test identifiers into Astor format (Class#method or Class)
+        failing_tests = bug_info.get(self.key_failing_test_identifiers, [])
+        normalized_failing: List[str] = []
+        for t in failing_tests:
+            if not t:
+                continue
+            if "#" in t:
+                normalized_failing.append(t)
+                continue
+            # Keep pure class names (common when only the class fails)
+            if t.endswith(("Test", "Tests", "ITCase")):
+                normalized_failing.append(t)
+                continue
+            cls, sep, method = t.rpartition(".")
+            if cls and method:
+                normalized_failing.append(f"{cls}#{method}")
+            else:
+                normalized_failing.append(t)
+        # Astor expects failing tests separated by the platform path separator (':' on Linux/macOS)
+        failing_arg = (
+            f"-failing {os.pathsep.join(normalized_failing)} "
+            if normalized_failing
+            else ""
+        )
+        jvm_bin_dir = os.path.join(env["JAVA_HOME"], "jre", "bin")
+        if not self.is_dir(jvm_bin_dir):
+            jvm_bin_dir = os.path.join(env["JAVA_HOME"], "bin")
+
         # generate patches
         self.timestamp_log_start()
         repair_command = (
@@ -104,9 +133,15 @@ class AstorTool(AbstractRepairTool):
             f"-bintestfolder  {dir_test_bin} "
             f"-location {absolute_directory_path} "
             f"-dependencies {list_deps_str} "
+            f"{failing_arg}"
+            f"-faultlocalization gzoltar "
+            f"-jvm4testexecution {jvm_bin_dir} "
+            f"-jvm4evosuitetestexecution {jvm_bin_dir} "
+            f"-javacompliancelevel 8 "
+            f"-tmax1 180000 -tmax2 600000 "
             f"-maxgen {max_gen} "
             f"-maxtime {int(math.ceil(float(timeout_m)))} "
-            f"-stopfirst false "
+            f"-stopfirst true "
         )
 
         status = self.run_command(

@@ -36,10 +36,17 @@ class ARJA(AbstractRepairTool):
         passing_test_identifiers_list = bug_info[self.key_passing_test_identifiers]
         failing_test_identifiers_list = bug_info[self.key_failing_test_identifiers]
 
-        dir_java_src = join(self.dir_expr, "src", bug_info[self.key_dir_source])
-        dir_test_src = join(self.dir_expr, "src", bug_info[self.key_dir_tests])
-        dir_java_bin = join(self.dir_expr, "src", bug_info[self.key_dir_class])
-        dir_test_bin = join(self.dir_expr, "src", bug_info[self.key_dir_test_class])
+        project_name = bug_info.get(self.key_project_name, "").strip()
+        if project_name:
+            base_path = join(self.dir_expr, "src", "src", project_name)
+        else:
+            base_path = join(self.dir_expr, "src")
+
+        dir_java_src = join(base_path, bug_info[self.key_dir_source])
+        dir_test_src = join(base_path, bug_info[self.key_dir_tests])
+        dir_java_bin = join(base_path, bug_info[self.key_dir_class])
+        dir_test_bin = join(base_path, bug_info[self.key_dir_test_class])
+
         env = self.d4j_env.copy()
         java_version = bug_info.get(self.key_java_version, 8)
         if int(java_version) <= 7:
@@ -53,6 +60,28 @@ class ARJA(AbstractRepairTool):
             join(self.arja_home, "external", "lib", "hamcrest-core-1.3.jar")
         )
         list_deps.append(join(self.arja_home, "external", "lib", "junit-4.11.jar"))
+        
+        if bug_info[self.key_build_system] == "maven":
+            self.run_command(
+                f"mvn dependency:copy-dependencies",
+                dir_path=base_path,
+                env=env,
+            )
+            # Add common folders for deependencies
+            list_deps += [
+                x
+                for x in self.list_dir(
+                    join(base_path, "target", "dependency")
+                )
+                if x.endswith(".jar")
+            ]
+            list_deps += [
+                x
+                for x in self.list_dir(
+                    join(base_path, "test", "target", "dependency")
+                )
+                if x.endswith(".jar")
+            ]
         list_deps_str = ":".join(list_deps)
 
         arja_default_population_size = 40
@@ -90,7 +119,7 @@ class ARJA(AbstractRepairTool):
         status = self.run_command(
             arja_command,
             self.log_output_path,
-            dir_path=join(self.dir_expr, "src"),
+            dir_path=base_path,
             env=self.d4j_env,
         )
 

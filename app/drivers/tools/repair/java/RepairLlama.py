@@ -60,10 +60,23 @@ class RepairLlama(AbstractRepairTool):
                 dir_path=base_path,
                 env=env,
             )
+        
+
+        # Replace main.py in the current working directory with repairllama_main.py from setup directory
+        src_main_py = join(self.dir_setup, "repairllama_main.py")
+        dst_main_py = "main.py"  # current working directory
+
+        if not self.is_file(src_main_py):
+            raise FileNotFoundError(f"{src_main_py} not found in setup directory")
+        else:
+            copy_cmd = f"cp {src_main_py} {dst_main_py}"
+            self.run_command(copy_cmd, log_file_path=self.log_output_path, env=env)
+            self.emit_normal(f"[repairllama] Copied {src_main_py} to {dst_main_py}")
 
         # execute repair tool
         command = (
             f"python3.10 main.py "
+            f"--base_path {base_path} "
             f"--dir_java_src {dir_java_src} "
             f"--dir_test_src {dir_test_src} "
             f"--dir_java_bin {dir_java_bin} "

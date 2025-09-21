@@ -29,7 +29,7 @@ class Nopol(AbstractRepairTool):
         self.dir_output - directory to store artifacts/output
         """
         
-        # Add environment setup (from your working manual version)
+        # Add environment setup
         env = {}
         java_version = bug_info.get(self.key_java_version, 8)
         if int(java_version) <= 7:
@@ -66,7 +66,7 @@ class Nopol(AbstractRepairTool):
         else:
             maven_deps = []
 
-        # Build dependency list (updated to include Maven deps)
+        # Build dependency list
         list_deps = [join(self.dir_expr, dep) for dep in bug_info[self.key_dependencies]]
         list_deps.append(join(self.nopol_home, "nopol/lib/hamcrest-core-1.3.jar"))
         list_deps.append(join(self.nopol_home, "nopol/lib/junit-4.11.jar"))

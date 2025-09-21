@@ -137,11 +137,10 @@ class AstorTool(AbstractRepairTool):
             f"-faultlocalization gzoltar "
             f"-jvm4testexecution {jvm_bin_dir} "
             f"-jvm4evosuitetestexecution {jvm_bin_dir} "
-            f"-javacompliancelevel 8 "
-            f"-tmax1 180000 -tmax2 600000 "
+            f"-javacompliancelevel {java_version} "
             f"-maxgen {max_gen} "
             f"-maxtime {int(math.ceil(float(timeout_m)))} "
-            f"-stopfirst true "
+            f"-stopfirst false "
         )
 
         status = self.run_command(

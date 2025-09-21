@@ -110,6 +110,7 @@ class AbstractTool(AbstractDriver):
     key_huggingface_token = definitions.KEY_HUGGINGFACE_TOKEN
     key_bug_reports = definitions.KEY_BUG_REPORTS
     key_gemini_token = definitions.KEY_GEMINI_TOKEN
+    key_project_name = definitions.KEY_PROJECT_NAME
     # endregion
 
     stats: ToolStats

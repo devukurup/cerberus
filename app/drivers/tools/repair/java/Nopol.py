@@ -28,20 +28,51 @@ class Nopol(AbstractRepairTool):
         self.dir_expr - directory for experiment
         self.dir_output - directory to store artifacts/output
         """
+        
+        # Add environment setup
+        env = {}
+        java_version = bug_info.get(self.key_java_version, 8)
+        if int(java_version) <= 7:
+            java_version = 8
+        env["JAVA_HOME"] = f"/usr/lib/jvm/java-{java_version}-openjdk-amd64/"
 
         timeout_h = str(task_config_info[self.key_timeout])
         failing_test_identifiers_list = bug_info[self.key_failing_test_identifiers]
-        dir_java_src = self.dir_expr + "/src/" + bug_info["source_directory"]
-        self.dir_source = dir_java_src
+        
+        # Extract relative directory paths from bug info for Java source and binaries
+        dir_java_src = bug_info[self.key_dir_source]
+        dir_test_src = bug_info[self.key_dir_tests]
+        dir_java_bin = bug_info[self.key_dir_class]
+        dir_test_bin = bug_info[self.key_dir_test_class]
 
-        dir_java_bin = join(self.dir_expr, "src", bug_info["class_directory"])
-        dir_test_bin = join(self.dir_expr, "src", bug_info["test_class_directory"])
+        project_name = bug_info.get(self.key_project_name, "").strip()
+        # Adding the submodule path to the experiment directory structure if that exists
+        absolute_directory_path = join(self.dir_expr, "src", "src", project_name) if project_name else join(self.dir_expr, "src")
+        
+        self.run_command("mvn clean compile test-compile -B", dir_path=absolute_directory_path, env=env)
+        
+        # Update the source directory for consistency
+        self.dir_source = join(absolute_directory_path, dir_java_src)
 
-        list_deps = [join(self.dir_expr, dep) for dep in bug_info["dependencies"]]
+        # Handle Maven dependencies
+        if bug_info.get(self.key_build_system) == "maven":
+            self.run_command(
+                "mvn dependency:copy-dependencies -DskipTests -B -DoutputDirectory=target/dependency",
+                dir_path=absolute_directory_path,
+                env=env,
+            )
+            dep_dir = join(absolute_directory_path, "target", "dependency")
+            maven_deps = [x for x in self.list_dir(dep_dir) if x.endswith(".jar")]
+        else:
+            maven_deps = []
+
+        # Build dependency list
+        list_deps = [join(self.dir_expr, dep) for dep in bug_info[self.key_dependencies]]
         list_deps.append(join(self.nopol_home, "nopol/lib/hamcrest-core-1.3.jar"))
         list_deps.append(join(self.nopol_home, "nopol/lib/junit-4.11.jar"))
-        list_deps.append(dir_java_bin)
-        list_deps.append(dir_test_bin)
+        list_deps.extend(maven_deps)  # Add Maven dependencies
+        list_deps.append(join(absolute_directory_path, "target", "classes"))      # Use compiled classes
+        list_deps.append(join(absolute_directory_path, "target", "test-classes")) # Use compiled test classes
 
         list_deps_str = ":".join(list_deps)
 
@@ -59,7 +90,7 @@ class Nopol(AbstractRepairTool):
         self.timestamp_log_start()
         repair_command = (
             f"timeout -k 5m {timeout_h}h java -jar {nopol_jar_path} nopol "
-            f"{dir_java_src} "
+            f"{self.dir_source} "
             f"{list_deps_str} "
             f"{solver_name} "
             f"{solver_path} "

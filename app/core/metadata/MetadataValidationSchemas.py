@@ -205,7 +205,7 @@ bug_info_schema = {
         MetadataFieldsEnum.TEST_TIMEOUT.value: {
             "type": "number",
             "minimum": 0,
-            "maximum": 100,
+            "maximum": 1000,
         },
         MetadataFieldsEnum.BUG_TYPE.value: {"type": "string"},
         MetadataFieldsEnum.PASSING_TEST_IDS.value: {

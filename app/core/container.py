@@ -382,7 +382,8 @@ def exec_command(
             privileged=True,
             demux=True,
             workdir=workdir,
-            tty=True,
+            tty=False,
+            stdin=False,
             environment=env,
         )
         if output is not None:

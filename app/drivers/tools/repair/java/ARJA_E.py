@@ -35,12 +35,20 @@ class ARJA_E(AbstractRepairTool):
 
         classpath = f"{join(self.arja_e_home, 'lib/*')}:{join(self.arja_e_home, 'bin')}:/root/.m2/repository/*"
 
-        dir_java_src = join(self.dir_expr, "src", bug_info[self.key_dir_source])
-        dir_test_src = join(self.dir_expr, "src", bug_info[self.key_dir_tests])
-        dir_java_bin = join(self.dir_expr, "src", bug_info[self.key_dir_class])
-        dir_test_bin = join(self.dir_expr, "src", bug_info[self.key_dir_test_class])
+        dir_localization = f"{self.dir_output}/localization"
         passing_test_identifiers_list = bug_info[self.key_passing_test_identifiers]
         failing_test_identifiers_list = bug_info[self.key_failing_test_identifiers]
+
+        project_name = bug_info.get(self.key_project_name, "").strip()
+        if project_name:
+            base_path = join(self.dir_expr, "src", "src", project_name)
+        else:
+            base_path = join(self.dir_expr, "src")
+
+        dir_java_src = join(base_path, bug_info[self.key_dir_source])
+        dir_test_src = join(base_path, bug_info[self.key_dir_tests])
+        dir_java_bin = join(base_path, bug_info[self.key_dir_class])
+        dir_test_bin = join(base_path, bug_info[self.key_dir_test_class])
 
         env = self.d4j_env.copy()
         java_version = bug_info.get(self.key_java_version, 8)
@@ -62,8 +70,29 @@ class ARJA_E(AbstractRepairTool):
             join(self.arja_e_home, "external", "lib", "junit-4.12.jar"),
         ]
 
+        if bug_info[self.key_build_system] == "maven":
+            self.run_command(
+                f"mvn dependency:copy-dependencies",
+                dir_path=base_path,
+                env=env,
+            )
+            # Add common folders for dependencies
+            list_deps += [
+                x
+                for x in self.list_dir(
+                    join(base_path, "target", "dependency")
+                )
+                if x.endswith(".jar")
+            ]
+            list_deps += [
+                x
+                for x in self.list_dir(
+                    join(base_path, "test", "target", "dependency")
+                )
+                if x.endswith(".jar")
+            ]
+
         list_deps_str = ":".join(list_deps)
-        dir_localization = f"{self.dir_output}/localization"
         if task_config_info[definitions.KEY_CONFIG_FIX_LOC] != "tool":
             self.run_command(f"mkdir {dir_localization}")
             localization_lines = self.transform_localization(
@@ -111,25 +140,6 @@ class ARJA_E(AbstractRepairTool):
             f"-DgzoltarDataDir {dir_localization} "
         )
 
-        env = self.d4j_env.copy()
-        java_version = bug_info.get(self.key_java_version, 8)
-        if int(java_version) <= 7:
-            java_version = 8
-        env["JAVA_HOME"] = f"/usr/lib/jvm/java-{java_version}-openjdk-amd64/"
-
-        self.run_command(
-            "bash {}".format(bug_info.get(self.key_build_script)),
-            dir_path=self.dir_setup,
-            env=env,
-        )
-
-        if bug_info[self.key_build_system] == "maven":
-            self.run_command(
-                f"mvn dependency:copy-dependencies",
-                dir_path=join(self.dir_expr, "src"),
-                env=env,
-            )
-
         if not passing_test_identifiers_list:
             test_list_str = ",".join(failing_test_identifiers_list)
             arja_e_command += f" -Dtests {test_list_str}"
@@ -137,7 +147,7 @@ class ARJA_E(AbstractRepairTool):
         status = self.run_command(
             arja_e_command,
             self.log_output_path,
-            dir_path=join(self.dir_expr, "src"),
+            dir_path=base_path,
             env=env,
         )
 

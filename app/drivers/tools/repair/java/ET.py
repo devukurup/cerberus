@@ -38,7 +38,7 @@ class ET(AbstractRepairTool):
             self.dir_output - directory to store artifacts/output
         """
 
-        repo_path = (Path(self.dir_expr) / "src").resolve()
+        repo_path = (Path(self.dir_expr) / bug_info["project_name"] / "src").resolve()
         setup_path = Path(self.dir_setup).resolve()
         # print(bug_info, task_config_info, self.container_id)
 

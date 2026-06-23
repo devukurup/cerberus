@@ -1,6 +1,6 @@
 # Evaluating Automated Program Repair on Time-Critical Hot fix Bugs
 
-A fork of [Cerberus](https://github.com/nus-apr/cerberus) for evaluating APR tools on hot fix bugs from the [HotBugs.jar dataset](https://github.com/carolhanna01/HotBugs-dot-jar).
+A fork of [Cerberus](https://github.com/nus-apr/cerberus) for evaluating APR tools on hot fix bugs from the [HotBugs.jar dataset](https://anonymous.4open.science/r/HotBugs-dot-jar).
 
 The original Cerberus documentation is preserved in [CERBERUS-README.md](CERBERUS-README.md).
 
